@@ -64,24 +64,28 @@ class Download extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
     	// echo DOWNLOAD_PATH."\n";
-    	$illust_id = '74227149';
+    	$illust_id = $input->getArgument('illust_id');
 
-    	$output->writeln("get illust <{$illust_id}> meta");
+    	$output->writeln("<info>get illust <{$illust_id}> meta</info>");
     	try {
     		$metaBody = $this->pixivGet("ajax/illust/{$illust_id}");
     	} catch (\Exception $e) {
-			$output->writeln("get meta failed : {$e->getMessage()}");
+			$output->writeln("<error>get meta failed </error>\n <comment>{$e->getMessage()}</comment>");
     		return ;
     	}
-    	$output->writeln("get illust <{$illust_id}> pages");
+    	$output->writeln("<info>get illust <{$illust_id}> pages</info>");
     	try {
     		$pagesBody = $this->pixivGet("ajax/illust/{$illust_id}/pages");
     	} catch (\Exception $e) {
-			$output->writeln("get pages failed : {$e->getMessage()}");
+			$output->writeln("<error>get pages failed </error>\n <comment>{$e->getMessage()}</comment>");
     		return ;
     	}
 		$this->preparePath(DOWNLOAD_PATH) && $this->preparePath(DOWNLOAD_PATH."/{$illust_id}");
 		file_put_contents(DOWNLOAD_PATH."/{$illust_id}/meta.json", json_encode($metaBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
     	file_put_contents(DOWNLOAD_PATH."/{$illust_id}/pages.json", json_encode($pagesBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
+
+    	$total_imgs = count($pagesBody);
+
+    	$output->writeln("<info>illust <{$illust_id}> [{$metaBody['illustTitle']}] has {$total_imgs} images.</info>");
     }
 }
