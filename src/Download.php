@@ -61,6 +61,20 @@ class Download extends Command
 		return $data['body'];
     }
 
+    protected function download($url, $dir) {
+    	$index = strrpos($url, "/");
+    	if ($index) {
+    		$filename = substr($url, $index+1);
+    		$savepath = "{$dir}/{$filename}";
+    		if (!file_exists($savepath)) {
+    			$response = $this->client->get($url, ['save_to' => $savepath]);
+    			return ['response_code'=>$response->getStatusCode(), 'name' => $filename];
+    		} else {
+    			return ['message' => "{$savepath} exist", 'name' => $filename];
+    		}
+    	}
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output)
     {
     	// echo DOWNLOAD_PATH."\n";
@@ -80,22 +94,24 @@ class Download extends Command
 			$output->writeln("<error>get pages failed </error>\n <comment>{$e->getMessage()}</comment>");
     		return ;
     	}
-		$this->preparePath(DOWNLOAD_PATH) && $this->preparePath(DOWNLOAD_PATH."/{$illust_id}");
-		file_put_contents(DOWNLOAD_PATH."/{$illust_id}/meta.json", json_encode($metaBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
-    	file_put_contents(DOWNLOAD_PATH."/{$illust_id}/pages.json", json_encode($pagesBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
+
+    	$illust_dir = DOWNLOAD_PATH."/{$illust_id}";
+
+		$this->preparePath(DOWNLOAD_PATH) && $this->preparePath($illust_dir);
+		file_put_contents("{$illust_dir}/meta.json", json_encode($metaBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
+    	file_put_contents("{$illust_dir}/pages.json", json_encode($pagesBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
 
     	$total_imgs = count($pagesBody);
 
     	$output->writeln("<info>illust <{$illust_id}> [{$metaBody['illustTitle']}] has {$total_imgs} images.</info>");
 
     	foreach($pagesBody as $vo) {
-    		
     		$url = $vo['urls']['original'];
-
     		if (defined('SPD_URL')) {
 				$url = str_replace("https://i.pximg.net", SPD_URL, $url);
     		}
-    		$output->writeln($url);
+    		$output->writeln("<info> download {$url}</info>");
+    		var_dump($this->download($url, $illust_dir));
     	}
     }
 }
