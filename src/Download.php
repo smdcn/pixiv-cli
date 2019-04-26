@@ -12,39 +12,38 @@ use Symfony\Component\Console\Input\InputArgument;
 class Download extends Command
 {
     // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'download';
+  protected static $defaultName = 'download';
 
-    public function __construct()
-    {
-        parent::__construct();
-        $this->client = new Client([
-        'base_uri' => 'https://www.pixiv.net/',
-        'cookies' => true
+  public function __construct()
+  {
+    parent::__construct();
+    $this->client = new Client([
+      'base_uri' => 'https://www.pixiv.net/',
+      'cookies' => true
     ]);
     $this->headers = [
       'Referer' => 'https://www.pixiv.net/',
       'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36'
     ];
-    }
+  }
 
-    protected function configure()
-    {
-        $this->setDescription('Download Images');
-      $this->addArgument('illust_id', InputArgument::REQUIRED, 'The id of the illust.');
-    }
+  protected function configure()
+  {
+    $this->setDescription('Download Images');
+    $this->addArgument('illust_id', InputArgument::REQUIRED, 'The id of the illust.');
+  }
 
-    protected function preparePath($dir) {
-      if (!is_dir($dir)) {
+  protected function preparePath($dir) {
+    if (!is_dir($dir)) {
       return mkdir($dir);
     }
     return true;
-    }
+  }
 
-    protected function pixivGet($url) {
-
+  protected function pixivGet($url) 
+  {
     $response = $this->client->request('GET', $url, $this->headers);
     $body = $response->getBody();
-    
     $data = json_decode($body, TRUE);
     if (!$data || !isset($data['error'])) {
       throw new Exception("response body not expect");
@@ -59,59 +58,60 @@ class Download extends Command
       throw new Exception("response object without body");
     }
     return $data['body'];
-    }
+  }
 
-    protected function download($url, $dir) {
-      $index = strrpos($url, "/");
-      if ($index) {
-        $filename = substr($url, $index+1);
-        $savepath = "{$dir}/{$filename}";
-        if (!file_exists($savepath)) {
-          $response = $this->client->get($url, ['save_to' => $savepath]);
-          return ['response_code'=>$response->getStatusCode(), 'name' => $filename];
-        } else {
-          return ['message' => "{$savepath} exist", 'name' => $filename];
-        }
+  protected function download($url, $dir) {
+    $index = strrpos($url, "/");
+    if ($index) {
+      $filename = substr($url, $index+1);
+      $savepath = "{$dir}/{$filename}";
+      if (!file_exists($savepath)) {
+        $response = $this->client->get($url, ['save_to' => $savepath]);
+        return ['response_code'=>$response->getStatusCode(), 'name' => $filename];
+      } else {
+        return ['message' => "{$savepath} exist", 'name' => $filename];
       }
     }
+  }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
-    {
-      // echo DOWNLOAD_PATH."\n";
-      $illust_id = $input->getArgument('illust_id');
+  protected function execute(InputInterface $input, OutputInterface $output)
+  {
+    // echo DOWNLOAD_PATH."\n";
+    $illust_id = $input->getArgument('illust_id');
 
-      $output->writeln("<info>get illust <{$illust_id}> meta</info>");
-      try {
-        $metaBody = $this->pixivGet("ajax/illust/{$illust_id}");
-      } catch (\Exception $e) {
+    $output->writeln("<info>get illust <{$illust_id}> meta</info>");
+    try {
+      $metaBody = $this->pixivGet("ajax/illust/{$illust_id}");
+    } catch (\Exception $e) {
       $output->writeln("<error>get meta failed </error>\n <comment>{$e->getMessage()}</comment>");
-        return ;
-      }
-      $output->writeln("<info>get illust <{$illust_id}> pages</info>");
-      try {
-        $pagesBody = $this->pixivGet("ajax/illust/{$illust_id}/pages");
-      } catch (\Exception $e) {
+      return ;
+    }
+    
+    $output->writeln("<info>get illust <{$illust_id}> pages</info>");
+    try {
+      $pagesBody = $this->pixivGet("ajax/illust/{$illust_id}/pages");
+    } catch (\Exception $e) {
       $output->writeln("<error>get pages failed </error>\n <comment>{$e->getMessage()}</comment>");
-        return ;
-      }
+      return ;
+    }
 
-      $illust_dir = DOWNLOAD_PATH."/{$illust_id}";
+    $illust_dir = DOWNLOAD_PATH."/{$illust_id}";
 
     $this->preparePath(DOWNLOAD_PATH) && $this->preparePath($illust_dir);
     file_put_contents("{$illust_dir}/meta.json", json_encode($metaBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
-      file_put_contents("{$illust_dir}/pages.json", json_encode($pagesBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
+    file_put_contents("{$illust_dir}/pages.json", json_encode($pagesBody, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE));
 
-      $total_imgs = count($pagesBody);
+    $total_imgs = count($pagesBody);
 
-      $output->writeln("<info>illust <{$illust_id}> [{$metaBody['illustTitle']}] has {$total_imgs} images.</info>");
+    $output->writeln("<info>illust <{$illust_id}> [{$metaBody['illustTitle']}] has {$total_imgs} images.</info>");
 
-      foreach($pagesBody as $vo) {
-        $url = $vo['urls']['original'];
-        if (defined('SPD_URL')) {
-        $url = str_replace("https://i.pximg.net", SPD_URL, $url);
-        }
-        $output->writeln("<info> download {$url}</info>");
-        var_dump($this->download($url, $illust_dir));
+    foreach($pagesBody as $vo) {
+      $url = $vo['urls']['original'];
+      if (defined('SPD_URL')) {
+      $url = str_replace("https://i.pximg.net", SPD_URL, $url);
       }
+      $output->writeln("<info> download {$url}</info>");
+      var_dump($this->download($url, $illust_dir));
     }
+  }
 }
