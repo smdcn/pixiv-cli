@@ -87,5 +87,15 @@ class Download extends Command
     	$total_imgs = count($pagesBody);
 
     	$output->writeln("<info>illust <{$illust_id}> [{$metaBody['illustTitle']}] has {$total_imgs} images.</info>");
+
+    	foreach($pagesBody as $vo) {
+    		
+    		$url = $vo['urls']['original'];
+
+    		if (defined('SPD_URL')) {
+				$url = str_replace("https://i.pximg.net", SPD_URL, $url);
+    		}
+    		$output->writeln($url);
+    	}
     }
 }
