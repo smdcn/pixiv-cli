@@ -6,6 +6,8 @@ use GuzzleHttp\Cookie\FileCookieJar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Helper\ProgressBar;
+
 
 
 class Download extends CommonCmd
@@ -56,13 +58,16 @@ class Download extends CommonCmd
     return $data['body'];
   }
 
-  protected function download($url, $dir) {
+  protected function download($url, $dir, $progress) {
     $index = strrpos($url, "/");
     if ($index) {
       $filename = substr($url, $index+1);
       $savepath = "{$dir}/{$filename}";
       if (!file_exists($savepath)) {
-        $response = $this->client->get($url, ['save_to' => $savepath]);
+        $response = $this->client->get($url, [
+          'save_to' => $savepath,
+          'progress' => $progress
+        ]);
         return ['response_code'=>$response->getStatusCode(), 'name' => $filename];
       } else {
         return ['message' => "{$savepath} exist", 'name' => $filename];
@@ -104,10 +109,31 @@ class Download extends CommonCmd
     foreach($pagesBody as $vo) {
       $url = $vo['urls']['original'];
       if (defined('SPD_URL')) {
-      $url = str_replace("https://i.pximg.net", SPD_URL, $url);
+        $url = str_replace("https://i.pximg.net", SPD_URL, $url);
       }
       $output->writeln("<info> download {$url}</info>");
-      var_dump($this->download($url, $illust_dir));
+      $progressBar = new ProgressBar($output);
+      $lastProgress = 0;
+      $progressBar->setMaxSteps(100);
+      $progressBar->start();
+      $ret = $this->download($url, $illust_dir, function(
+            $downloadTotal,
+            $downloadedBytes,
+            $uploadTotal,
+            $uploadedBytes
+        ) use (&$progressBar, &$lastProgress) {
+          $progressBar->setMaxSteps($downloadTotal);
+          $progressBar->advance($downloadedBytes - $lastProgress);
+          $lastProgress = $downloadedBytes;
+            //do something
+        });
+      $progressBar->finish();
+      if (isset($ret['response_code'])) {
+        $output->writeln("\n({$ret['response_code']}) | ({$ret['name']})");
+      } else if (isset($ret['message'])) {
+        $output->writeln("\n({$ret['message']}) | ({$ret['name']})");
+      }
+      
     }
   }
 }
