@@ -2,14 +2,13 @@
 
 namespace SmdCn\Pixiv\Client;
 use GuzzleHttp\Client;
-
-use Symfony\Component\Console\Command\Command;
+use GuzzleHttp\Cookie\FileCookieJar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 
 
-class Download extends Command
+class Download extends CommonCmd
 {
     // the name of the command (the part after "bin/console")
   protected static $defaultName = 'download';
@@ -19,12 +18,9 @@ class Download extends Command
     parent::__construct();
     $this->client = new Client([
       'base_uri' => 'https://www.pixiv.net/',
-      'cookies' => true
+      'cookies' => $this->cookies,
+      'headers' => $this->headers,
     ]);
-    $this->headers = [
-      'Referer' => 'https://www.pixiv.net/',
-      'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.108 Safari/537.36'
-    ];
   }
 
   protected function configure()
@@ -42,7 +38,7 @@ class Download extends Command
 
   protected function pixivGet($url) 
   {
-    $response = $this->client->request('GET', $url, $this->headers);
+    $response = $this->client->request('GET', $url);
     $body = $response->getBody();
     $data = json_decode($body, TRUE);
     if (!$data || !isset($data['error'])) {

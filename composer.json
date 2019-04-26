@@ -1,11 +1,14 @@
 {
     "require": {
         "guzzlehttp/guzzle": "~6.0",
-        "symfony/console": "^4.2"
+        "symfony/console": "^4.2",
+        "symfony/dom-crawler": "^4.2",
+        "symfony/css-selector": "^4.2"
     },
     "autoload": {
         "psr-4": {
             "SmdCn\\Pixiv\\Client\\": "src/"
         }
-    }
+    },
+    "bin": ["client.php"]
 }
